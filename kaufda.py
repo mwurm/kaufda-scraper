@@ -551,7 +551,7 @@ if __name__ == "__main__":
             results_by_category[category] = all_results
 
 
-    generate_html_table(outfile=f"target/einkaufsuebersicht.html", results_by_category=results_by_category)
+    generate_html_table(outfile=f"docs/index.html", results_by_category=results_by_category)
 
     exit(0)
 
