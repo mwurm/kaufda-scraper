@@ -480,18 +480,22 @@ def extract_price_of_base_unit(text: str) -> float | None:
 
     patterns = [
         # 1er-Matches
-        r"(\d+[.,]\d+)?\s*/\s*[kg|ml|g|l]",  # "15.23 / kg
-        r"[kg|ml|g|l]\s*=\s*(\d+[.,]\d+)?\s*",  # "1 kg = 15.23
+        r"(\d+[.,]\d+(?:[–-]\d+[.,]\d+)?)?\s*/\s*[kg|ml|g|l]",  # "15.23 / kg" or "11,63–6,20 / kg"
+        r"[kg|ml|g|l]\s*=\s*(\d+[.,]\d+(?:[–-]\d+[.,]\d+)?)?\s*",  # "1 kg = 15.23" or "1 kg = 11,63–6,20"
     ]
 
     for pattern in patterns:
         match = re.search(pattern, cleaned_text, re.IGNORECASE)
         if match and match.group(1):
-            try:
-                price_of_base_unit = float(match.group(1).replace(",", "."))
-                break
-            except (ValueError, TypeError):
-                continue
+            # Extrahiere alle Zahlen aus dem Match
+            numbers = re.findall(r"\d+[.,]\d+", match.group(1))
+            if numbers:
+                try:
+                    values = [float(n.replace(",", ".")) for n in numbers]
+                    price_of_base_unit = min(values)
+                    break
+                except (ValueError, TypeError):
+                    continue
 
     return price_of_base_unit
 

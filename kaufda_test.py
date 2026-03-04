@@ -1,5 +1,5 @@
 import unittest
-from kaufda import extract_base_unit
+from kaufda import extract_base_unit, extract_price_of_base_unit
 
 class TestExtractBaseUnit(unittest.TestCase):
 
@@ -72,6 +72,79 @@ class TestExtractBaseUnit(unittest.TestCase):
         # Mehrere Einheiten, aber erster Match zählt
         result = extract_base_unit("1kg = 11,63–6,20")
         self.assertEqual(result, (1.0, "kg"))
+
+
+class TestExtractPriceOfBaseUnit(unittest.TestCase):
+
+    def test_per_kg(self):
+        # "15.23 / kg" -> 15.23
+        result = extract_price_of_base_unit("15.23 / kg")
+        self.assertEqual(result, 15.23)
+
+    def test_kg_equals(self):
+        # "1 kg = 15.23" -> 15.23
+        result = extract_price_of_base_unit("1 kg = 15.23")
+        self.assertEqual(result, 15.23)
+
+    def test_comma_separator(self):
+        # "15,23 / kg" -> 15.23
+        result = extract_price_of_base_unit("15,23 / kg")
+        self.assertEqual(result, 15.23)
+
+    def test_with_eur(self):
+        # "15.23 EUR / kg" -> 15.23
+        result = extract_price_of_base_unit("15.23 EUR / kg")
+        self.assertEqual(result, 15.23)
+
+    def test_with_euro_symbol(self):
+        # "15.23 € / kg" -> 15.23
+        result = extract_price_of_base_unit("15.23 € / kg")
+        self.assertEqual(result, 15.23)
+
+    def test_dash_price(self):
+        # "10,- EUR / kg" -> 10.00
+        result = extract_price_of_base_unit("10,- EUR / kg")
+        self.assertEqual(result, 10.00)
+
+    def test_dot_dash_price(self):
+        # "10.- EUR / kg" -> 10.00
+        result = extract_price_of_base_unit("10.- EUR / kg")
+        self.assertEqual(result, 10.00)
+
+    def test_ml_unit(self):
+        # "5.50 / ml" -> 5.50
+        result = extract_price_of_base_unit("5.50 / ml")
+        self.assertEqual(result, 5.50)
+
+    def test_l_equals(self):
+        # "1 l = 2.99" -> 2.99
+        result = extract_price_of_base_unit("1 l = 2.99")
+        self.assertEqual(result, 2.99)
+
+    def test_no_match(self):
+        # Kein Preis gefunden -> None
+        result = extract_price_of_base_unit("kein Preis hier")
+        self.assertIsNone(result)
+
+    def test_invalid_number(self):
+        # Ungültige Zahl -> None
+        result = extract_price_of_base_unit("abc / kg")
+        self.assertIsNone(result)
+
+    def test_case_insensitive(self):
+        # Groß-/Kleinschreibung ignorieren
+        result = extract_price_of_base_unit("15.23 / KG")
+        self.assertEqual(result, 15.23)
+
+    def test_multiple_matches(self):
+        # Mehrere Matches, aber erster zählt
+        result = extract_price_of_base_unit("15.23 / kg und 20.00 / l")
+        self.assertEqual(result, 15.23)
+
+    def test_range(self):
+        # Mehrere Einheiten, aber erster Match zählt
+        result = extract_price_of_base_unit("1kg = 11,63–6,20")
+        self.assertEqual(result, 6.2)
 
 
 if __name__ == '__main__':
