@@ -451,9 +451,6 @@ def format_cell(rank: int, entry: dict, second_price: float | None):
     badge_str = f" {badges}" if badges else ""
 
 
-    if image and not image.startswith('data:'):
-        image = encode_image_to_base64(image)
-
     img_html = f'<img src="{image}" style="width:80px;border-radius:8px;"><br>'
 
     price = price if price is not None else float('inf')  # Unbekannter Preis wird als unendlich teuer behandelt
