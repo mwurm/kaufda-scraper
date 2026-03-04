@@ -92,6 +92,7 @@ articles:
     - Putengeschnetzeltes
 
   "Fisch & Meeresfrüchte🐟":
+    - Thunfisch
     - "Lachs geräuchert":
         multisearch:
           - Lachs
@@ -133,6 +134,12 @@ articles:
     - Golden Toast
 
   Milchprodukte🧀:
+    - Butter:
+        match_none:
+          - Butter milch
+          - Buttermilch
+          - Butteralternative
+          - vegan
     - Schlagsahne:
         match_none:
           - vegan
