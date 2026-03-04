@@ -6,6 +6,8 @@ publishers:
   - penny
 # "rewe", "edeka", "lidl", "Netto Marken-Discount", "Penny", "Metro"]]
 articles:
+  Test:
+#    - Weißwurst
   Getränke🍻:
     - Augustiner
     - Chiemseer
@@ -22,6 +24,10 @@ articles:
           - vegan
           - Garden Gourmet
           - Trolli
+    - Weißwurst:
+        match_none:
+          - vegan
+          - Garden Gourmet
     - Rinderhüftsteak
     - Rumpsteak
     - Cevapcici:
