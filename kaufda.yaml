@@ -70,6 +70,12 @@ articles:
         match_any:
           - Beinscheibe.*Rind
           - Rind.*Beinscheibe
+    - Leberkäs-Bret:
+        multisearch:
+          - Leberkäs
+        match_any:
+          - roh\b  # "roh", aber nicht "Strohschwein"
+          - Bret
 
   "Geflügel🍗":
     - Hähnchenbrustfilet:
