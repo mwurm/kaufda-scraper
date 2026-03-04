@@ -1,0 +1,158 @@
+publishers:
+  - rewe
+  - edeka
+  - netto marken-discount
+  - lidl
+  - penny
+# "rewe", "edeka", "lidl", "Netto Marken-Discount", "Penny", "Metro"]]
+articles:
+  Getränke🍻:
+    - Augustiner
+    - Chiemseer
+    - Oettinger
+    - Jever
+  Fleisch🥩:
+    - Rinderfilet
+    - Burger:
+        multisearch:
+          - Burger
+          - Patties
+        match_none:
+          - Fertiggericht
+          - vegan
+          - Garden Gourmet
+          - Trolli
+    - Rinderhüftsteak
+    - Rumpsteak
+    - Cevapcici:
+        match_none:
+          - vegan
+    - Schweinefilet:
+        match_none:
+          - Rippchen
+          - vegan
+          - Spanferkel
+    - Entrecote
+    - Roastbeef
+    - Rinderroulade:
+        multisearch:
+          - Roulade
+    - Rindergulasch:
+        multisearch:
+          - Gulasch
+        match_any:
+          - (Rind|Jungbulle).*Gulasch
+          - Gulasch.*(Rind|Jungbulle)
+        match_none:
+          - Kalb
+    - Schweinegulasch:
+        multisearch:
+          - Gulasch
+        match_any:
+          - Schwein.*Gulasch
+          - Gulasch.*Schwein
+
+    - falsches Filet
+    - Chorizo
+    - Wiener:
+        match_none:
+          - vegan
+          - vegetarisch
+          - Geflügel
+          - Hähnchen
+    - Beinscheibe:
+        match_any:
+          - Beinscheibe.*Rind
+          - Rind.*Beinscheibe
+
+  "Geflügel🍗":
+    - Hähnchenbrustfilet:
+        multisearch:
+          - Hähnchenbrust
+          - Hähnchenbrustfilet
+        match_any:
+          - Hähnchen[-]?brust[-]?[filet]?
+        match_none:
+          - Fertiggericht
+          - vegan
+    - Putenschnitzel
+    - Hähnchengeschnetzeltes
+    - Putengeschnetzeltes
+
+  "Fisch & Meeresfrüchte🐟":
+    - "Lachs geräuchert":
+        multisearch:
+          - Lachs
+          - Lachsforelle
+        match_any:
+          - Lachs.*räucher
+    - "Lachsfilet":
+        multisearch:
+          - Lachs
+          - Lachsforelle
+        match_any:
+          - Lachs.*filet
+        match_none:
+          - räucher
+          - panier
+    - Fischstäbchen
+    - Backfisch:
+        match_none:
+          - Fischstäbchen
+
+  Feinkost🫒:
+    - D'arbo
+    - Maultaschen
+    - Pelmeni
+    - Pesto
+    - Barilla Pasta:
+        multisearch:
+          - Pasta
+        match_any:
+          - Barilla.*Pasta
+          - Pasta.*Barilla
+    - Olivenöl
+
+  "Obst & Gemüse🍎🫑":
+    - Heidelbeeren
+    - Erdbeeren
+    - Himbeeren
+  Backwaren🥖🥨:
+    - Golden Toast
+
+  Milchprodukte🧀:
+    - Schlagsahne:
+        match_none:
+          - vegan
+          - Kochsahne
+  "Süßwaren🍫":
+    - Lindt Tafel:
+        multisearch:
+          - Lindt
+        match_any:
+          - Lindt.*Tafel
+          - Tafel.*Lindt
+    - "Milka Tafel":
+        multisearch:
+          - Milka
+        match_any:
+          - Milka.*Tafel
+          - Tafel.*Milka
+    - Toffifee
+    - Nutella
+
+  Sonstiges:
+    - "Ben & Jerry":
+        multisearch:
+          - Jerry
+        match_any:
+          - Ben.*Jerry.*Eis
+          - Eis.*Ben.*Jerry
+    - Magnum Eis:
+        multisearch:
+          - Magnum
+        match_any:
+          - Magnum.*Eis
+          - Eis.*Magnum
+
+
