@@ -176,6 +176,50 @@ class Deal:
     def normalized_price_by_base_unit(self) -> str | None:
         return normalize_price(self.price_by_base_unit)
 
+    def extract_value_in_price_by_base_unit(self) -> float | None:
+        """
+        Vereinheitlicht Preisangaben pro kg oder l.
+
+        Beispiele:
+        "1 kg = 46.13"        -> 46.13
+        "15.98 / kg"          -> 15.98
+        "1kg = 11,63–6,20"    -> 6.2 (min value)
+        "1 l = 1.80"          -> "1.80"
+        """
+
+        text = self.price_by_base_unit
+        if not text:
+            return None
+
+        # Kommas in Punkte umwandeln
+        text = text.replace(",", ".")
+
+        # Zahlen extrahieren
+        numbers = re.findall(r"\d+(?:\.\d+)?", text)
+
+        if not numbers:
+            return None
+
+        try:
+            values = [Decimal(n) for n in numbers]
+        except InvalidOperation:
+            return None
+
+        # Falls Form wie "1 kg = 46.13" → die "1" ignorieren
+        if len(values) >= 2 and values[0] == 1:
+            values = values[1:]
+
+        if not values:
+            return None
+
+        # Einzelpreis (bei mehreren: Minimum liefern)
+        return float(min(values))
+
+    def normalized_price_by_base_unit(self) -> str | None:
+        return normalize_price(self.price_by_base_unit)
+
+
+
 
 @dataclass(frozen=True)
 class SearchResult:
@@ -254,7 +298,7 @@ def search_article(search_req: SearchRequest, preffered_publishers: List[str] | 
     seen = set()
     found_results_without_duplicates = []
     for found_result in found_results:
-        price_per_kg = extract_price_per_kg(found_result)
+        price_per_kg = extract_normalized_price(found_result)
         result_key = (found_result.publisher_name, price_per_kg if price_per_kg else random.random())
         if result_key not in seen:
             seen.add(result_key)
@@ -368,24 +412,111 @@ def run_search_req(search_request: SearchRequest, publishers: List[str] | None =
         print(f"   Fehler: {e}\n")
 
 
+def extract_base_unit(text: str) -> tuple[float, str]:
+    base_unit = (None, None)
 
-def extract_price_per_kg(result: SearchResult) -> float | None:
-    prices = []
+    patterns_with_specific_units = [
+        # 3er-Matches
+        r"(\d+)\s*x\s*(\d+)\s*(kg|ml|g|l)",  # "4 x 125g"
 
-    for deal in result.deals:
-        if deal.price_min == 0.0:
-            continue
+        # 2er-Matches
+        r"(\d+)\s*(kg|ml|g|l)",  # "100g
+        r"(\d+)-(kg|ml|g|l)-P",  # "100-g-Pckg
 
-        normalized = deal.normalized_price_by_base_unit()
-        if not normalized:
-            continue
+        # 1er-Matches
+        r"/\s*(kg|ml|g|l)",  # "15.23 / kg
+        r"\d+(?:[.,]\d+)?\s*(kg|ml|g|l)\s*=",  # "1 kg = ...
+        r"pro\s+(kg|liter|l)",  # "pro kg = ...
+        r"je\s+(kg|liter|l)",  # "pro kg = ...
 
-        match = re.search(r"([\d\.]+)\s*€/", normalized)
+    ]
+
+    for pattern in patterns_with_specific_units:
+        match = re.search(pattern, text, re.IGNORECASE)
         if match:
-            prices.append(float(match.group(1)))
+            if len(match.groups()) == 1:
+                base_unit = (1.0, match.group(1))
+                break
+            if len(match.groups()) == 2:
+                value = float(match.group(1))
+                base_unit = match.group(2)
+                if base_unit == "g":
+                    base_unit = "kg"
+                    value = value / 1000.0
+                if base_unit == "ml":
+                    base_unit = "l"
+                    value = value / 1000.0
+                base_unit = (value, base_unit)
+                break
+            if len(match.groups()) == 3:
+                multiplier = float(match.group(1))
+                value = float(match.group(2))
+                base_unit = match.group(3)
+                if base_unit == "g":
+                    base_unit = "kg"
+                    value = value / 1000.0
+                if base_unit == "ml":
+                    base_unit = "l"
+                    value = value / 1000.0
+                base_unit = (multiplier * value, base_unit)
+                break
 
-    return min(prices) if prices else None
 
+    return base_unit if base_unit[1] else (None, None)
+
+
+def extract_price_of_base_unit(text: str) -> float | None:
+    price_of_base_unit = None
+
+    cleaned_text = text
+
+    # bereinige Werte wie '10,- EUR' oder '10.- EUR' zu '10,00 EUR'
+    cleaned_text = re.sub(r",-", ",00", cleaned_text, flags=re.IGNORECASE)
+    cleaned_text = re.sub(r".-", ",00", cleaned_text, flags=re.IGNORECASE)
+
+    # entferne Währungsangaben, um die Extraktion zu erleichtern
+    cleaned_text = re.sub(r"EUR|€", "", cleaned_text, flags=re.IGNORECASE)
+
+
+    patterns = [
+        # 1er-Matches
+        r"(\d+[.,]\d+)?\s*/\s*[kg|ml|g|l]",  # "15.23 / kg
+        r"[kg|ml|g|l]\s*=\s*(\d+[.,]\d+)?\s*",  # "1 kg = 15.23
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, cleaned_text, re.IGNORECASE)
+        if match and match.group(1):
+            try:
+                price_of_base_unit = float(match.group(1).replace(",", "."))
+                break
+            except (ValueError, TypeError):
+                continue
+
+    return price_of_base_unit
+
+
+def extract_normalized_price(result: SearchResult) -> tuple[float, str]:
+    for deal in result.deals:
+        base_unit = extract_base_unit(deal.price_by_base_unit)
+        if not base_unit[1]:
+            continue
+
+        price_of_base_unit = extract_price_of_base_unit(deal.price_by_base_unit)
+        if price_of_base_unit is not None:
+            return (price_of_base_unit / base_unit[0], base_unit[1])
+
+    # Keine Base-Unit in Deals gefunden? In description suchen und mit min_price kombinieren
+    base_unit = extract_base_unit(result.description)
+    if base_unit[1]:
+        price_of_base_unit = extract_price_of_base_unit(result.description)
+        if price_of_base_unit is not None:
+            return (price_of_base_unit / base_unit[0], base_unit[1])
+        else:
+            price_of_base_unit = min([deal.price_min for deal in result.deals])
+            return (price_of_base_unit / base_unit[0], base_unit[1])
+
+    return (float('inf'), "?")
 
 def detect_badges(result: SearchResult) -> str:
     text = (result.description or "").lower()
@@ -404,11 +535,12 @@ def group_by_article(results: Iterable[SearchResult]):
     grouped = defaultdict(list)
 
     for r in results:
-        price = extract_price_per_kg(r)
+        normalized_price = extract_normalized_price(r)
 
         grouped[r.article].append({
             "store": r.publisher_name,
-            "price": price,
+            "price": normalized_price[0],
+            "normalized_price_with_unit_tuple": normalized_price,
             "image": r.image_url,
             "badges": detect_badges(r)
         })
@@ -436,6 +568,7 @@ def format_cell(rank: int, entry: dict, second_price: float | None):
     medal = medals[rank]
 
     price = entry["price"]
+    normalized_price_with_unit_tuple = entry["normalized_price_with_unit_tuple"]
     store = entry["store"]
     badges = entry["badges"]
     image = entry["image"] or ""
@@ -458,7 +591,7 @@ def format_cell(rank: int, entry: dict, second_price: float | None):
         <div style="text-align:center;">
             {img_html}
             <strong>{medal} {store}</strong><br>
-            {price:.2f}€/kg{extra}{badge_str}
+            {normalized_price_with_unit_tuple[0]:.2f}€/{normalized_price_with_unit_tuple[1]}{extra}{badge_str}
         </div>
     """
 
