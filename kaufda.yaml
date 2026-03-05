@@ -214,6 +214,10 @@ articles:
         match_any:
           - Magnum.*Eis
           - Eis.*Magnum
+    - Cremissimo
+    - m&m's:
+        multisearch:
+          - m und ms
     - Cracker TUC/Wasa:
         multisearch:
           - Cracker"
