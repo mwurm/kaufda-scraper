@@ -347,6 +347,7 @@ def search_aldi(search_req: SearchRequest) -> List[SearchResult]:
     rsp = requests_cache_session.get(url, headers=REQUEST_HEADERS)
     rsp.raise_for_status()
 
+    (brochure_valid_from, brochure_valid_until) = (None, None)
     brochure_search_groups = rsp.json().get('brochureSearchGroups', [])
     aldi_brochure_id = None
     for group in brochure_search_groups:
@@ -355,6 +356,8 @@ def search_aldi(search_req: SearchRequest) -> List[SearchResult]:
             brochure_content_retailer_name = brochure_content.get('retailer', {}).get('name', '')
             if brochure_content_retailer_name and brochure_content_retailer_name.lower() == 'aldi süd':
                 aldi_brochure_id = brochure_content.get('contentId')
+                brochure_valid_from = parser.parse(brochure.get('content').get('publishedFrom'))
+                brochure_valid_until = parser.parse(brochure.get('content').get('validUntil'))
                 break
 
     if aldi_brochure_id is None:
@@ -372,6 +375,8 @@ def search_aldi(search_req: SearchRequest) -> List[SearchResult]:
         for offer in offers:
             search_result = extract_content(offer, search_req)
             if search_result:
+                if len(search_result.pub_dates) == 0:
+                    search_result.pub_dates.append((brochure_valid_from.date(), brochure_valid_until.date()))
                 search_results.append(search_result)
 
     return search_results
@@ -480,8 +485,6 @@ def extract_content(result_entry: dict, search_req: SearchRequest) -> SearchResu
                                          image_url=image_url,
                                          deals=tuple(deals_dataobjects), description=name_and_description, pub_dates=pub_dates)
 
-            if search_result.has_no_deal_in_current_week():
-                return None
             return search_result
 
         return None
@@ -639,6 +642,8 @@ def group_by_article(results: Iterable[SearchResult]):
     grouped = defaultdict(list)
 
     for r in results:
+        if r.has_no_deal_in_current_week():
+            continue
         normalized_price = extract_normalized_price(r)
 
         grouped[r.article].append({
