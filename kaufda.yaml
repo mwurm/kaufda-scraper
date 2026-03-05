@@ -173,5 +173,10 @@ articles:
         match_any:
           - Magnum.*Eis
           - Eis.*Magnum
-
-
+  Sonderartikel:
+    - Bartschneider:
+        match_any:
+          - Bart[-]?schneider
+          - Bart[-]?trimmer
+          - Haar[-]?schneider
+          - Haar[-]?trimmer
