@@ -2,10 +2,37 @@
     <html>
     <head>
         <meta charset="UTF-8">
+        <script>
+            function filterTable() {
+                const input = document.getElementById("search");
+                const filter = input.value.toLowerCase();
+                const rows = document.querySelectorAll("table tr");
+    
+                rows.forEach((row, index) => {
+                    if (index === 0) return; // Tabellenheader immer sichtbar
+    
+                    const text = row.innerText.toLowerCase();
+                    if (text.includes(filter)) {
+                        row.style.display = "";
+                    } else {
+                        row.style.display = "none";
+                    }
+                });
+            }
+        </script>
     </head>
     <body style="font-family:Arial;">
         <h2>🛒 Einkaufsübersicht</h2>
         Für aktuelle Woche bis So 08.03
+        <br><br>
+        <input 
+            type="text" 
+            id="search" 
+            onkeyup="filterTable()" 
+            placeholder="🔍 Produkt oder Markt suchen..."
+            style="padding:8px;width:300px;font-size:16px;"
+        >
+        
     
 <h3>Getränke🍻</h3>
 <table border="1" cellpadding="10" cellspacing="0" style="border-collapse:collapse;">
@@ -17,18 +44,34 @@
             </tr>
             
                 <tr>
-                    <td><strong>Augustiner</strong></td>
+                    <td><strong>Bier</strong></td>
                     <td>
         <div style="text-align:center;">
-            <img src="https://content-media.bonial.biz/4360f22c-ff8e-4884-83f9-5a0e13a3a533/main.jpg" style="width:160px;border-radius:8px;"><br>
-            <strong>🥇 EDEKA</strong><br>
-            1.80€/l
+            <img src="https://content-media.bonial.biz/cb41029b-ab14-455a-8bcc-d5f187fadd40/main.jpg" style="width:160px;border-radius:8px;"><br>
+            <strong>🥇 Netto</strong><br>
+            0.79€/l
             
             <br>
         </div>
     </td>
-                    <td></td>
-                    <td></td>
+                    <td>
+        <div style="text-align:center;">
+            <img src="https://content-media.bonial.biz/c9be1ecc-15e2-47a1-a86a-4650df4669d2/main.jpg" style="width:160px;border-radius:8px;"><br>
+            <strong>🥈 EDEKA</strong><br>
+            0.98€/l
+            
+            <br>
+        </div>
+    </td>
+                    <td>
+        <div style="text-align:center;">
+            <img src="https://content-media.bonial.biz/718d1d16-1cea-4b95-9e97-4b7aa031c698/main.jpg" style="width:160px;border-radius:8px;"><br>
+            <strong>🥉 Netto</strong><br>
+            1.10€/l
+            
+            <br>
+        </div>
+    </td>
                 </tr>
             
                 <tr>

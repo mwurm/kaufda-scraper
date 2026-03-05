@@ -710,10 +710,37 @@ def generate_html_table(outfile: str, results_by_category: dict) -> str:
     <html>
     <head>
         <meta charset="UTF-8">
+        <script>
+            function filterTable() {{
+                const input = document.getElementById("search");
+                const filter = input.value.toLowerCase();
+                const rows = document.querySelectorAll("table tr");
+    
+                rows.forEach((row, index) => {{
+                    if (index === 0) return; // Tabellenheader immer sichtbar
+    
+                    const text = row.innerText.toLowerCase();
+                    if (text.includes(filter)) {{
+                        row.style.display = "";
+                    }} else {{
+                        row.style.display = "none";
+                    }}
+                }});
+            }}
+        </script>
     </head>
     <body style="font-family:Arial;">
         <h2>🛒 Einkaufsübersicht</h2>
         Für aktuelle Woche bis {TAGE[END_OF_WEEK.weekday()]} {END_OF_WEEK.strftime('%d.%m')}
+        <br><br>
+        <input 
+            type="text" 
+            id="search" 
+            onkeyup="filterTable()" 
+            placeholder="🔍 Produkt oder Markt suchen..."
+            style="padding:8px;width:300px;font-size:16px;"
+        >
+        
     """
 
     for (category, results) in results_by_category.items():
