@@ -1,25 +1,86 @@
 
     <html>
     <head>
-        <meta charset="UTF-8">
-        <script>
-            function filterTable() {
-                const input = document.getElementById("search");
-                const filter = input.value.toLowerCase();
-                const rows = document.querySelectorAll("table tr");
+    <meta charset="UTF-8">
     
-                rows.forEach((row, index) => {
-                    if (index === 0) return; // Tabellenheader immer sichtbar
+    <style>
+    button.store {
+        padding:8px 14px;
+        margin-right:6px;
+        border-radius:6px;
+        border:1px solid #ccc;
+        background:#f3f3f3;
+        cursor:pointer;
+    }
     
-                    const text = row.innerText.toLowerCase();
-                    if (text.includes(filter)) {
-                        row.style.display = "";
-                    } else {
-                        row.style.display = "none";
+    button.store.active {
+        background:#2b7cff;
+        color:white;
+        border-color:#2b7cff;
+    }
+    </style>
+    
+    <script>
+    
+    let activeStores = new Set();
+    
+    function toggleStore(store) {
+    
+        if (activeStores.has(store)) {
+            activeStores.delete(store);
+        } else {
+            activeStores.add(store);
+        }
+    
+        document.querySelectorAll(".store").forEach(btn=>{
+            if(activeStores.has(btn.dataset.store)){
+                btn.classList.add("active");
+            }else{
+                btn.classList.remove("active");
+            }
+        });
+    
+        filterTable();
+    }
+    
+    function filterTable(){
+    
+        const textFilter =
+            document.getElementById("search").value.toLowerCase();
+    
+        const rows =
+            document.querySelectorAll("table tr");
+    
+        rows.forEach((row,index)=>{
+    
+            if(index===0) return;
+    
+            const text =
+                row.innerText.toLowerCase();
+    
+            let visible = true;
+    
+            if(textFilter && !text.includes(textFilter)){
+                visible = false;
+            }
+    
+            if(activeStores.size>0){
+                let match=false;
+    
+                activeStores.forEach(store=>{
+                    if(text.includes(store.toLowerCase())){
+                        match=true;
                     }
                 });
+    
+                if(!match) visible=false;
             }
-        </script>
+    
+            row.style.display = visible ? "" : "none";
+        });
+    }
+    
+    </script>
     </head>
     <body style="font-family:Arial;">
         <h2>🛒 Einkaufsübersicht</h2>
@@ -32,8 +93,14 @@
             placeholder="🔍 Produkt oder Markt suchen..."
             style="padding:8px;width:300px;font-size:16px;"
         >
-        
-    
+        <br><br>
+    <button class='store' data-store='REWE' onclick="toggleStore('REWE')">REWE</button>
+<button class='store' data-store='ALDI SÜD' onclick="toggleStore('ALDI SÜD')">ALDI SÜD</button>
+<button class='store' data-store='EDEKA' onclick="toggleStore('EDEKA')">EDEKA</button>
+<button class='store' data-store='NETTO MARKEN-DISCOUNT' onclick="toggleStore('NETTO MARKEN-DISCOUNT')">NETTO MARKEN-DISCOUNT</button>
+<button class='store' data-store='LIDL' onclick="toggleStore('LIDL')">LIDL</button>
+<button class='store' data-store='PENNY' onclick="toggleStore('PENNY')">PENNY</button>
+
 <h3>Getränke🍻</h3>
 <table border="1" cellpadding="10" cellspacing="0" style="border-collapse:collapse;">
             <tr style="background:#f2f2f2;">
@@ -48,7 +115,7 @@
                     <td>
         <div style="text-align:center;">
             <img src="https://content-media.bonial.biz/cb41029b-ab14-455a-8bcc-d5f187fadd40/main.jpg" style="width:160px;border-radius:8px;"><br>
-            <strong>🥇 Netto</strong><br>
+            <strong>🥇 Netto Marken-Discount</strong><br>
             0.79€/l
             
             <br>
@@ -66,7 +133,7 @@
                     <td>
         <div style="text-align:center;">
             <img src="https://content-media.bonial.biz/718d1d16-1cea-4b95-9e97-4b7aa031c698/main.jpg" style="width:160px;border-radius:8px;"><br>
-            <strong>🥉 Netto</strong><br>
+            <strong>🥉 Netto Marken-Discount</strong><br>
             1.10€/l
             
             <br>
@@ -105,7 +172,7 @@
                     <td>
         <div style="text-align:center;">
             <img src="https://content-media.bonial.biz/7ef8007a-7451-4207-8ff5-eda0e3f855f9/main.jpg" style="width:160px;border-radius:8px;"><br>
-            <strong>🥇 Netto</strong><br>
+            <strong>🥇 Netto Marken-Discount</strong><br>
             9.99€/kg 🔥
             
             <br>02. März 2026 – 07. März 2026
@@ -211,7 +278,7 @@
                     <td>
         <div style="text-align:center;">
             <img src="https://content-media.bonial.biz/203e994b-c2a9-4e39-817d-a50d8e2568a4/main.jpg" style="width:160px;border-radius:8px;"><br>
-            <strong>🥇 Netto</strong><br>
+            <strong>🥇 Netto Marken-Discount</strong><br>
             13.98€/kg
             
             <br>
@@ -257,7 +324,7 @@
                     <td>
         <div style="text-align:center;">
             <img src="https://content-media.bonial.biz/a433b90e-593a-4fed-b8f0-f17304864091/main.jpg" style="width:160px;border-radius:8px;"><br>
-            <strong>🥇 Netto</strong><br>
+            <strong>🥇 Netto Marken-Discount</strong><br>
             16.90€/kg ⚖️
             
             <br>
@@ -335,7 +402,7 @@
                     <td>
         <div style="text-align:center;">
             <img src="https://content-media.bonial.biz/715eeb78-1a40-44bc-b694-0f53a0219dab/main.jpg" style="width:160px;border-radius:8px;"><br>
-            <strong>🥈 Netto</strong><br>
+            <strong>🥈 Netto Marken-Discount</strong><br>
             14.13€/kg
             
             <br>gültig am Samstag, 07.03.26
@@ -387,7 +454,7 @@
                     <td>
         <div style="text-align:center;">
             <img src="https://content-media.bonial.biz/c7eb10fb-3889-4295-9428-25663000af39/main.jpg" style="width:160px;border-radius:8px;"><br>
-            <strong>🥇 Netto</strong><br>
+            <strong>🥇 Netto Marken-Discount</strong><br>
             6.22€/kg 🔥
             
             <br>02. März 2026 – 07. März 2026
@@ -452,7 +519,7 @@
                     <td>
         <div style="text-align:center;">
             <img src="https://content-media.bonial.biz/a4a1984e-1819-4c51-85a7-3b285a25e8f6/main.jpg" style="width:160px;border-radius:8px;"><br>
-            <strong>🥇 Netto</strong><br>
+            <strong>🥇 Netto Marken-Discount</strong><br>
             10.00€/kg
             
             <br>
@@ -555,7 +622,7 @@
                     <td>
         <div style="text-align:center;">
             <img src="https://content-media.bonial.biz/b92b9090-4767-4cff-bac7-64c0ada1e2c9/main.jpg" style="width:160px;border-radius:8px;"><br>
-            <strong>🥇 Netto</strong><br>
+            <strong>🥇 Netto Marken-Discount</strong><br>
             19.50€/kg ⚖️
             
             <br>Montag – Samstag 02. März 2026 – 07. März 2026
@@ -595,7 +662,7 @@
                     <td>
         <div style="text-align:center;">
             <img src="https://content-media.bonial.biz/2d9b86e5-30aa-4506-b2d9-2969c8c5c5c8/main.jpg" style="width:160px;border-radius:8px;"><br>
-            <strong>🥈 Netto</strong><br>
+            <strong>🥈 Netto Marken-Discount</strong><br>
             15.98€/kg
             
             <br>
@@ -769,7 +836,7 @@
                     <td>
         <div style="text-align:center;">
             <img src="https://content-media.bonial.biz/5b9024db-1f7b-4d40-8af3-d27848bc4f25/main.jpg" style="width:160px;border-radius:8px;"><br>
-            <strong>🥇 Netto</strong><br>
+            <strong>🥇 Netto Marken-Discount</strong><br>
             6.98€/kg 🔥
             
             <br>
@@ -800,7 +867,7 @@
                     <td>
         <div style="text-align:center;">
             <img src="https://content-media.bonial.biz/fdb5213b-d7ab-4907-bd65-b57c20123217/main.jpg" style="width:160px;border-radius:8px;"><br>
-            <strong>🥇 Netto</strong><br>
+            <strong>🥇 Netto Marken-Discount</strong><br>
             12.00€/kg 🔥
             
             <br>
@@ -823,7 +890,7 @@
                     <td>
         <div style="text-align:center;">
             <img src="https://content-media.bonial.biz/ebc19a56-faff-4730-9139-d992e03f9d10/main.jpg" style="width:160px;border-radius:8px;"><br>
-            <strong>🥇 Netto</strong><br>
+            <strong>🥇 Netto Marken-Discount</strong><br>
             7.99€/kg
             
             <br>Donnerstag – Samstag 05. März 2026 – 07. März 2026
@@ -873,7 +940,7 @@
                     <td>
         <div style="text-align:center;">
             <img src="https://content-media.bonial.biz/ccf282df-f6e3-4515-bdbc-bfcd6015eb66/main.jpg" style="width:160px;border-radius:8px;"><br>
-            <strong>🥈 Netto</strong><br>
+            <strong>🥈 Netto Marken-Discount</strong><br>
             4.72€/kg
             
             <br>Butter
@@ -968,7 +1035,7 @@
                     <td>
         <div style="text-align:center;">
             <img src="https://content-media.bonial.biz/02afb432-c5ff-4059-b02f-db9d967d1384/main.jpg" style="width:160px;border-radius:8px;"><br>
-            <strong>🥇 Netto</strong><br>
+            <strong>🥇 Netto Marken-Discount</strong><br>
             6.64€/kg 🔥
             
             <br>Montag, 02.03.26 – Samstag, 07.03.26
@@ -977,7 +1044,7 @@
                     <td>
         <div style="text-align:center;">
             <img src="https://content-media.bonial.biz/828d1d8d-55bb-43f6-a76a-64f6ada9f38e/main.jpg" style="width:160px;border-radius:8px;"><br>
-            <strong>🥈 Netto</strong><br>
+            <strong>🥈 Netto Marken-Discount</strong><br>
             9.84€/kg
             
             <br>02. März 2026 – 07. März 2026

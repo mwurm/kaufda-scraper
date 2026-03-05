@@ -390,7 +390,7 @@ def extract_content(result_entry: dict, search_req: SearchRequest) -> SearchResu
     publisher_name = content_object.get("publisher", {}).get("name", None)
     if not publisher_name:
         publisher_name = content_object.get("publisherName")
-    publisher_name = 'Netto' if publisher_name and publisher_name.lower() == 'netto marken-discount' else publisher_name
+    #publisher_name = 'Netto' if publisher_name and publisher_name.lower() == 'netto marken-discount' else publisher_name
     image = content_object.get("image", {})
     image_url = None
     if image and isinstance(image, dict):
@@ -709,25 +709,86 @@ def generate_html_table(outfile: str, results_by_category: dict) -> str:
     html = f"""
     <html>
     <head>
-        <meta charset="UTF-8">
-        <script>
-            function filterTable() {{
-                const input = document.getElementById("search");
-                const filter = input.value.toLowerCase();
-                const rows = document.querySelectorAll("table tr");
+    <meta charset="UTF-8">
     
-                rows.forEach((row, index) => {{
-                    if (index === 0) return; // Tabellenheader immer sichtbar
+    <style>
+    button.store {{
+        padding:8px 14px;
+        margin-right:6px;
+        border-radius:6px;
+        border:1px solid #ccc;
+        background:#f3f3f3;
+        cursor:pointer;
+    }}
     
-                    const text = row.innerText.toLowerCase();
-                    if (text.includes(filter)) {{
-                        row.style.display = "";
-                    }} else {{
-                        row.style.display = "none";
+    button.store.active {{
+        background:#2b7cff;
+        color:white;
+        border-color:#2b7cff;
+    }}
+    </style>
+    
+    <script>
+    
+    let activeStores = new Set();
+    
+    function toggleStore(store) {{
+    
+        if (activeStores.has(store)) {{
+            activeStores.delete(store);
+        }} else {{
+            activeStores.add(store);
+        }}
+    
+        document.querySelectorAll(".store").forEach(btn=>{{
+            if(activeStores.has(btn.dataset.store)){{
+                btn.classList.add("active");
+            }}else{{
+                btn.classList.remove("active");
+            }}
+        }});
+    
+        filterTable();
+    }}
+    
+    function filterTable(){{
+    
+        const textFilter =
+            document.getElementById("search").value.toLowerCase();
+    
+        const rows =
+            document.querySelectorAll("table tr");
+    
+        rows.forEach((row,index)=>{{
+    
+            if(index===0) return;
+    
+            const text =
+                row.innerText.toLowerCase();
+    
+            let visible = true;
+    
+            if(textFilter && !text.includes(textFilter)){{
+                visible = false;
+            }}
+    
+            if(activeStores.size>0){{
+                let match=false;
+    
+                activeStores.forEach(store=>{{
+                    if(text.includes(store.toLowerCase())){{
+                        match=true;
                     }}
                 }});
+    
+                if(!match) visible=false;
             }}
-        </script>
+    
+            row.style.display = visible ? "" : "none";
+        }});
+    }}
+    
+    </script>
     </head>
     <body style="font-family:Arial;">
         <h2>🛒 Einkaufsübersicht</h2>
@@ -740,8 +801,12 @@ def generate_html_table(outfile: str, results_by_category: dict) -> str:
             placeholder="🔍 Produkt oder Markt suchen..."
             style="padding:8px;width:300px;font-size:16px;"
         >
-        
+        <br><br>
     """
+
+    for pub in load_config("kaufda.yaml").get("publishers", []):
+        publisher = pub.strip().upper()
+        html += f"<button class='store' data-store='{publisher}' onclick=\"toggleStore('{publisher}')\">{publisher}</button>\n"
 
     for (category, results) in results_by_category.items():
         grouped = group_by_article(results)
