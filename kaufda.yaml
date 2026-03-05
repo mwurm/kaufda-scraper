@@ -7,29 +7,6 @@ publishers:
   - penny
 # "rewe", "edeka", "lidl", "Netto Marken-Discount", "Penny", "Metro"]]
 articles:
-  Test:
-  Getränke🍻:
-    - Augustiner/Tegernseer/Ayinger:
-        multisearch:
-          - Augustiner
-          - Tegernseer
-          - Ayinger
-        match_any:
-          - (Augustiner|Tegernseer|Ayinger)
-    - Bier
-    - Oettinger
-    - Jever Fun:
-        multisearch:
-          - Jever
-        match_any:
-          - Fun
-    - Wodka:
-        match_none:
-          - Mischgetränk
-    - Lillet
-    - Campari
-    - Aperol
-    - Tanqueray
   Fleisch🥩:
     - Ente
     - Lamm
@@ -174,10 +151,20 @@ articles:
           - Buttermilch
           - Butteralternative
           - vegan
+    - Skyr:
+        match_none:
+          - vegan
+          - Drink
+
+    - Griechischer Joghurt:
+        match_none:
+          - vegan
+
     - Schlagsahne:
         match_none:
           - vegan
           - Kochsahne
+          - laktosefrei
   "Süßwaren🍫":
     - Lindt Tafel:
         multisearch:
@@ -207,6 +194,32 @@ articles:
         match_any:
           - Magnum.*Eis
           - Eis.*Magnum
+  Getränke🍻:
+    - Gin:
+        multisearch:
+          - Gin
+        match_any:
+          - Alkoholische Getränke
+    - Augustiner/Tegernseer/Ayinger:
+        multisearch:
+          - Augustiner
+          - Tegernseer
+          - Ayinger
+        match_any:
+          - (Augustiner|Tegernseer|Ayinger)
+    - Bier
+    - Oettinger
+    - Jever Fun:
+        multisearch:
+          - Jever
+        match_any:
+          - Fun
+    - Wodka:
+        match_none:
+          - Mischgetränk
+    - Lillet
+    - Campari
+    - Aperol
   Sonderartikel:
     - Bartschneider:
         match_any:
