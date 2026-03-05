@@ -167,6 +167,7 @@ class Deal:
     price_min: float
     price_max: float
     price_by_base_unit: str
+    description: float
     conditions: list[str]
 
     def price_range_str(self) -> str:
@@ -335,7 +336,7 @@ def search_article(search_req: SearchRequest, preffered_publishers: List[str] | 
     found_results_without_duplicates = []
     for found_result in found_results:
         price_per_kg = extract_normalized_price(found_result)
-        result_key = (found_result.publisher_name, price_per_kg if price_per_kg else random.random())
+        result_key = (found_result.publisher_name, price_per_kg[1] if price_per_kg else random.random())
         if result_key not in seen:
             seen.add(result_key)
             found_results_without_duplicates.append(found_result)
@@ -463,6 +464,7 @@ def extract_content(result_entry: dict, search_req: SearchRequest) -> SearchResu
             deals_dataobjects: list[Deal] = []
             for deal in deals:
                 deal_type = deal.get("type")
+                deal_description = deal.get("description", None)
                 price_min = min(deal.get("min"), deal.get("max"))
                 price_max = max(deal.get("min"), deal.get("max"))
                 price_by_base_unit = deal.get("priceByBaseUnit")
@@ -478,7 +480,7 @@ def extract_content(result_entry: dict, search_req: SearchRequest) -> SearchResu
                 if 'EUR' != deal.get("currencyCode", "EUR"):
                     raise ValueError(f"Unexpected currency: {deal.get('currencyCode')}")
 
-                deals_dataobjects.append(Deal(type=deal_type, price_min=price_min, price_max=price_max, price_by_base_unit=price_by_base_unit, conditions=condition_strings))
+                deals_dataobjects.append(Deal(type=deal_type, description=deal_description, price_min=price_min, price_max=price_max, price_by_base_unit=price_by_base_unit, conditions=condition_strings))
 
             # Versuche zuerst SALES_PRICE zu extrahieren, sonst REGULAR_PRICE
             search_result = SearchResult(publisher_name=publisher_name, article=search_req.name,
@@ -603,7 +605,7 @@ def extract_price_of_base_unit(text: str) -> float | None:
     return price_of_base_unit
 
 
-def extract_normalized_price(result: SearchResult) -> tuple[float, str]:
+def extract_normalized_price(result: SearchResult) -> tuple[Deal, float, str]:
     for deal in result.deals:
         base_unit = extract_base_unit(deal.price_by_base_unit)
         if not base_unit[1]:
@@ -611,19 +613,24 @@ def extract_normalized_price(result: SearchResult) -> tuple[float, str]:
 
         price_of_base_unit = extract_price_of_base_unit(deal.price_by_base_unit)
         if price_of_base_unit is not None:
-            return (price_of_base_unit / base_unit[0], base_unit[1])
+            return (deal, price_of_base_unit / base_unit[0], base_unit[1])
 
     # Keine Base-Unit in Deals gefunden? In description suchen und mit min_price kombinieren
     base_unit = extract_base_unit(result.description)
+
+    priority_types = ['SALES_PRICE', 'SPECIAL_PRICE']
+
+    best_deal_guess = sorted(result.deals, key=lambda d: 0 if d.type in priority_types else 1)[0] if result.deals else None
+
     if base_unit[1]:
         price_of_base_unit = extract_price_of_base_unit(result.description)
         if price_of_base_unit is not None:
-            return (price_of_base_unit / base_unit[0], base_unit[1])
+            return (best_deal_guess, price_of_base_unit / base_unit[0], base_unit[1])
         else:
             price_of_base_unit = min([deal.price_min for deal in result.deals])
-            return (price_of_base_unit / base_unit[0], base_unit[1])
+            return (best_deal_guess, price_of_base_unit / base_unit[0], base_unit[1])
 
-    return (float('inf'), "?")
+    return (best_deal_guess, float('inf'), "?")
 
 def detect_badges(result: SearchResult) -> str:
     text = (result.description or "").lower()
@@ -648,7 +655,7 @@ def group_by_article(results: Iterable[SearchResult]):
 
         grouped[r.article].append({
             "store": r.publisher_name,
-            "price": normalized_price[0],
+            "price": normalized_price[1],
             "normalized_price_with_unit_tuple": normalized_price,
             "image": r.image_url,
             "badges": detect_badges(r),
@@ -681,17 +688,18 @@ def format_cell(rank: int, entry: dict, second_price: float | None):
     badge_str = f" {badges}" if badges else ""
 
 
-    img_html = f'<img src="{image}" style="width:80px;border-radius:8px;"><br>'
+    img_html = f'<img src="{image}" style="width:160px;border-radius:8px;"><br>'
 
 
-    pub_dates_html_lines = "📆" + "<br>".join(result.pub_date_strings()) if result.has_deal_outside_of_full_week() else ""
+    pub_dates_html_lines = "📆" + "<br>".join(result.pub_date_strings()) if result.has_deal_outside_of_full_week() else None
 
     return f"""
         <div style="text-align:center;">
             {img_html}
             <strong>{medal} {store}</strong><br>
-            {normalized_price_with_unit_tuple[0]:.2f}€/{normalized_price_with_unit_tuple[1]}{extra}{badge_str}<br>
-            {pub_dates_html_lines}
+            {normalized_price_with_unit_tuple[1]:.2f}€/{normalized_price_with_unit_tuple[2]}{extra}{badge_str}
+            {"<br>" + pub_dates_html_lines if pub_dates_html_lines else ""}
+            {"<br>" + normalized_price_with_unit_tuple[0].description if normalized_price_with_unit_tuple[0] else ""}
         </div>
     """
 
