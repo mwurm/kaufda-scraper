@@ -146,6 +146,8 @@ articles:
           - Kühne
         match_any:
           - Senf
+        match_none:
+          - Fleisch
 
   "Obst & Gemüse🍎🫑":
     - Spargel
