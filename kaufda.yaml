@@ -9,10 +9,22 @@ publishers:
 articles:
   Test:
   Getränke🍻:
+    - Bier
     - Chiemseer
     - Oettinger
     - Jever
+    - Wodka:
+        match_none:
+          - Mischgetränk
+    - Lillet
+    - Campari
+    - Aperol
+    - Tanqueray
   Fleisch🥩:
+    - Ente
+    - Lamm
+    - Hirsch
+    - Dorade
     - Rinderfilet
     - Burger:
         multisearch:
