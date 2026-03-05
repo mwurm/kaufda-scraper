@@ -1,5 +1,6 @@
 publishers:
   - rewe
+  - aldi süd
   - edeka
   - netto marken-discount
   - lidl
@@ -7,9 +8,7 @@ publishers:
 # "rewe", "edeka", "lidl", "Netto Marken-Discount", "Penny", "Metro"]]
 articles:
   Test:
-#    - Weißwurst
   Getränke🍻:
-    - Augustiner
     - Chiemseer
     - Oettinger
     - Jever
@@ -127,6 +126,7 @@ articles:
     - Olivenöl
 
   "Obst & Gemüse🍎🫑":
+    - Spargel
     - Heidelbeeren
     - Erdbeeren
     - Himbeeren

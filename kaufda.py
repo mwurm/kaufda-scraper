@@ -295,6 +295,10 @@ def search_article(search_req: SearchRequest, preffered_publishers: List[str] | 
             print(f"Exception: {e}")
             continue
 
+    if not preffered_publishers or 'aldi süd' in [p.lower() for p in preffered_publishers]:
+        aldi_results = search_aldi(search_req)
+        found_results.extend(aldi_results)
+
     seen = set()
     found_results_without_duplicates = []
     for found_result in found_results:
@@ -306,12 +310,55 @@ def search_article(search_req: SearchRequest, preffered_publishers: List[str] | 
     return list(found_results_without_duplicates)
 
 
+def search_aldi(search_req: SearchRequest) -> List[SearchResult]:
+    url = "https://www.kaufda.de/webapp/api/slots/brochureSearch?device=web_browser&query=Aldi%20S%C3%BCd&lat=47.965625499999994&lng=11.753921799999999&projection=web&executeSearchOn=contentSearchApi"
+    rsp = requests_cache_session.get(url, headers=REQUEST_HEADERS)
+    rsp.raise_for_status()
+
+    brochure_search_groups = rsp.json().get('brochureSearchGroups', [])
+    aldi_brochure_id = None
+    for group in brochure_search_groups:
+        for brochure in group.get('_embedded', {}).get('brochureSearchReferences', []):
+            brochure_content = brochure.get('content', {})
+            brochure_content_retailer_name = brochure_content.get('retailer', {}).get('name', '')
+            if brochure_content_retailer_name and brochure_content_retailer_name.lower() == 'aldi süd':
+                aldi_brochure_id = brochure_content.get('contentId')
+                break
+
+    if aldi_brochure_id is None:
+        return None
+
+
+    brochure_url = f"https://content-viewer-be.kaufda.de/api/v1/brochures/{aldi_brochure_id}/pages?partner=kaufda_web&brochureKey=&lat=47.965625499999994&lng=11.753921799999999"
+    rsp = requests_cache_session.get(brochure_url, headers=REQUEST_HEADERS)
+    rsp.raise_for_status()
+
+    search_results = []
+    aldi_brochure_contents = rsp.json().get('contents', {})
+    for content in aldi_brochure_contents:
+        offers = content.get('offers', [])
+        for offer in offers:
+            search_result = extract_content(offer, search_req)
+            if search_result:
+                search_results.append(search_result)
+
+    return search_results
+
+
+
 def extract_content(result_entry: dict, search_req: SearchRequest) -> SearchResult | None:
     content_object = result_entry.get("content", {})
 
-    publisher_name = content_object.get("publisherName")
+    publisher_name = content_object.get("publisher", {}).get("name", None)
+    if not publisher_name:
+        publisher_name = content_object.get("publisherName")
     publisher_name = 'Netto' if publisher_name and publisher_name.lower() == 'netto marken-discount' else publisher_name
-    image_url = content_object.get("image", {}).get("url", None)
+    image = content_object.get("image", {})
+    image_url = None
+    if image and isinstance(image, dict):
+        image_url = image.get("url", None)
+    elif image and isinstance(image, str):
+        image_url = image
 
     pub_dates = []
     for publicationProfile in content_object.get("publicationProfiles", []):
@@ -336,6 +383,8 @@ def extract_content(result_entry: dict, search_req: SearchRequest) -> SearchResu
         product_name_with_all_context_paths = name_and_description
         category_path_strings = []
         for category_path in p.get('categoryPaths', []):
+            if isinstance(category_path, dict):
+                category_path = [category_path]
             path = "/".join([cat.get("name", "").lower() for cat in category_path])
             category_path_strings.append(path)
             if PRINT_CATEGORY_PATHS:
@@ -416,6 +465,9 @@ def extract_base_unit(text: str) -> tuple[float, str]:
     base_unit = (None, None)
 
     patterns_with_specific_units = [
+        # Sonderfälle: kg-Preis immer 1 kg
+        r"(kg|liter|l)-Preis",  # "kg-Preis ...
+
         # 3er-Matches
         r"(\d+)\s*x\s*(\d+)\s*(kg|ml|g|l)",  # "4 x 125g"
 
@@ -472,7 +524,7 @@ def extract_price_of_base_unit(text: str) -> float | None:
 
     # bereinige Werte wie '10,- EUR' oder '10.- EUR' zu '10,00 EUR'
     cleaned_text = re.sub(r",-", ",00", cleaned_text, flags=re.IGNORECASE)
-    cleaned_text = re.sub(r".-", ",00", cleaned_text, flags=re.IGNORECASE)
+    cleaned_text = re.sub(r"\.-", ",00", cleaned_text, flags=re.IGNORECASE)
 
     # entferne Währungsangaben, um die Extraktion zu erleichtern
     cleaned_text = re.sub(r"EUR|€", "", cleaned_text, flags=re.IGNORECASE)
@@ -481,7 +533,8 @@ def extract_price_of_base_unit(text: str) -> float | None:
     patterns = [
         # 1er-Matches
         r"(\d+[.,]\d+(?:[–-]\d+[.,]\d+)?)?\s*/\s*[kg|ml|g|l]",  # "15.23 / kg" or "11,63–6,20 / kg"
-        r"[kg|ml|g|l]\s*=\s*(\d+[.,]\d+(?:[–-]\d+[.,]\d+)?)?\s*",  # "1 kg = 15.23" or "1 kg = 11,63–6,20"
+        r"[kg|ml|g|l]\s*=\s*(\d+[.,]\d+(?:[–-]\d+[.,]\d+)?)?\s*",
+        r"[kg|ml|g|l]-Preis\s*(\d+[.,]\d+(?:[–-]\d+[.,]\d+)?)?\s*",# "kg-Preis 11,63–6,20"
     ]
 
     for pattern in patterns:
