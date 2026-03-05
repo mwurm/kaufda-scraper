@@ -9,10 +9,20 @@ publishers:
 articles:
   Test:
   Getränke🍻:
+    - Augustiner/Tegernseer/Ayinger:
+        multisearch:
+          - Augustiner
+          - Tegernseer
+          - Ayinger
+        match_any:
+          - (Augustiner|Tegernseer|Ayinger)
     - Bier
-    - Chiemseer
     - Oettinger
-    - Jever
+    - Jever Fun:
+        multisearch:
+          - Jever
+        match_any:
+          - Fun
     - Wodka:
         match_none:
           - Mischgetränk
