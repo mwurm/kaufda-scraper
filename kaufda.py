@@ -3,11 +3,11 @@ from io import BytesIO
 
 import os
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta, timezone
 from collections import defaultdict
 from typing import Iterable
 import requests
-import time
+import time as time_module
 from typing import List, Dict
 import yaml
 from pathlib import Path
@@ -32,6 +32,8 @@ requests_cache_session = CachedSession(os.getenv('REQUESTS_CACHE_DB_PATH'), expi
 #         return ori_rsp
 
 # self.requests_cache_session.cache.save_response = save_response_if_criteria_met
+
+END_OF_WEEK = datetime.now().date() + timedelta(days=(6 - datetime.now().date().weekday()) % 7)
 
 PRINT_CATEGORY_PATHS = True
 PRINT_DEALS = True
@@ -237,6 +239,36 @@ class SearchResult:
         obj_string =  f"{self.article} | {self.publisher_name} | {self.description} || {'|'.join([d.__str__() for d in self.deals])}"
         return obj_string
 
+    def pub_date_strings(self) -> list[str]:
+        date_strs = []
+        for (start, end) in self.pub_dates:
+            date_strs.append(f"{TAGE[start.weekday()]} {start.strftime('%d.%m') if start else '?'} - {TAGE[end.weekday()]} {end.strftime('%d.%m') if end else '?'}")
+        return date_strs
+
+    def has_no_deal_in_current_week(self) -> bool:
+        today = datetime.now().date()
+        if today.weekday() == 6:
+            today = today + timedelta(days=1)
+
+        for (start, end) in self.pub_dates:
+            if start <= today <= end:
+                return False
+        return True
+
+    def has_deal_outside_of_full_week(self) -> bool:
+        today = datetime.now().date()
+        if today.weekday() == 6:
+            today = today + timedelta(days=1)
+
+        mon_of_week = today - timedelta(days=(today.weekday()))
+        sat_of_week = today + timedelta(days=(5 - today.weekday()) % 7)
+
+        for (start, end) in self.pub_dates:
+            if start != mon_of_week or end != sat_of_week:
+                return True
+        return False
+
+
     def to_markdown(self):
         obj_string =  f"{self.publisher_name} {self.article}: {self.description}: \n"
         obj_string +=  f"{self.image_url}\n"
@@ -273,7 +305,7 @@ def search_article(search_req: SearchRequest, preffered_publishers: List[str] | 
     for p in get_search_params(search_req):
         rsp = requests_cache_session.get(url, params=p, headers=REQUEST_HEADERS)
         if not rsp.from_cache:
-            time.sleep(.1)  # Rate limiting
+            time_module.sleep(.1)  # Rate limiting
 
         rsp.raise_for_status()
         responses.append(rsp)
@@ -367,7 +399,19 @@ def extract_content(result_entry: dict, search_req: SearchRequest) -> SearchResu
 
         start_parsed = parser.parse(start) if start else None
         end_parsed = parser.parse(end) if end else None
-        pub_dates.append((start_parsed, end_parsed))
+
+        cutoff = time(21, 0)
+
+        if start_parsed.time() >= cutoff:
+            start_parsed = start_parsed + timedelta(days=1)
+
+        start_date = start_parsed.date()
+        # Start = Sonntag? → Montag
+        if start_date.weekday() == 6:
+            start_date = start_date + timedelta(days=1)
+
+        end_date = end_parsed.date()
+        pub_dates.append((start_date, end_date))
 
     # finde gesuchten artikel in categoryPaths
     products = content_object.get("products", [])
@@ -435,6 +479,9 @@ def extract_content(result_entry: dict, search_req: SearchRequest) -> SearchResu
             search_result = SearchResult(publisher_name=publisher_name, article=search_req.name,
                                          image_url=image_url,
                                          deals=tuple(deals_dataobjects), description=name_and_description, pub_dates=pub_dates)
+
+            if search_result.has_no_deal_in_current_week():
+                return None
             return search_result
 
         return None
@@ -599,25 +646,11 @@ def group_by_article(results: Iterable[SearchResult]):
             "price": normalized_price[0],
             "normalized_price_with_unit_tuple": normalized_price,
             "image": r.image_url,
-            "badges": detect_badges(r)
+            "badges": detect_badges(r),
+            "result_object": r
         })
 
     return grouped
-
-
-def encode_image_to_base64(image_url: str) -> str:
-    """Konvertiert eine Bild-URL zu Base64-kodiertem Datenformat."""
-    try:
-        print(f"Encoding image: {image_url}")
-        response = requests_cache_session.get(image_url, timeout=5)
-        response.raise_for_status()
-        if not response.from_cache:
-            time.sleep(.5)
-        b64 = base64.b64encode(response.content).decode('utf-8')
-        return f"data:image/png;base64,{b64}"
-    except Exception as e:
-        print(f"Fehler beim Encoding des Bildes {image_url}: {e}")
-        return image_url
 
 
 def format_cell(rank: int, entry: dict, second_price: float | None):
@@ -629,6 +662,8 @@ def format_cell(rank: int, entry: dict, second_price: float | None):
     store = entry["store"]
     badges = entry["badges"]
     image = entry["image"] or ""
+    result : SearchResult = entry["result_object"]
+
 
     extra = ""
     if rank == 0 and second_price:
@@ -643,25 +678,29 @@ def format_cell(rank: int, entry: dict, second_price: float | None):
 
     img_html = f'<img src="{image}" style="width:80px;border-radius:8px;"><br>'
 
-    price = price if price is not None else float('inf')  # Unbekannter Preis wird als unendlich teuer behandelt
+
+    pub_dates_html_lines = "📆" + "<br>".join(result.pub_date_strings()) if result.has_deal_outside_of_full_week() else ""
+
     return f"""
         <div style="text-align:center;">
             {img_html}
             <strong>{medal} {store}</strong><br>
-            {normalized_price_with_unit_tuple[0]:.2f}€/{normalized_price_with_unit_tuple[1]}{extra}{badge_str}
+            {normalized_price_with_unit_tuple[0]:.2f}€/{normalized_price_with_unit_tuple[1]}{extra}{badge_str}<br>
+            {pub_dates_html_lines}
         </div>
     """
 
 
 def generate_html_table(outfile: str, results_by_category: dict) -> str:
 
-    html = """
+    html = f"""
     <html>
     <head>
         <meta charset="UTF-8">
     </head>
     <body style="font-family:Arial;">
         <h2>🛒 Einkaufsübersicht</h2>
+        Für aktuelle Woche bis {TAGE[END_OF_WEEK.weekday()]} {END_OF_WEEK.strftime('%d.%m')}
     """
 
     for (category, results) in results_by_category.items():
