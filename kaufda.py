@@ -39,6 +39,7 @@ PRINT_CATEGORY_PATHS = True
 PRINT_DEALS = True
 
 TAGE = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
+MEDALS = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣"]
 
 REQUEST_HEADERS = {
     "accept": "application/json",
@@ -666,8 +667,7 @@ def group_by_article(results: Iterable[SearchResult]):
 
 
 def format_cell(rank: int, entry: dict, second_price: float | None):
-    medals = ["🥇", "🥈", "🥉"]
-    medal = medals[rank]
+    medal = MEDALS[rank]
 
     price = entry["price"]
     normalized_price_with_unit_tuple = entry["normalized_price_with_unit_tuple"]
@@ -808,6 +808,8 @@ def generate_html_table(outfile: str, results_by_category: dict) -> str:
         publisher = pub.strip().upper()
         html += f"<button class='store' data-store='{publisher}' onclick=\"toggleStore('{publisher}')\">{publisher}</button>\n"
 
+    RANK_COLUMNS = 6
+
     for (category, results) in results_by_category.items():
         grouped = group_by_article(results)
 
@@ -818,34 +820,31 @@ def generate_html_table(outfile: str, results_by_category: dict) -> str:
         html +=   """<table border="1" cellpadding="10" cellspacing="0" style="border-collapse:collapse;">
             <tr style="background:#f2f2f2;">
                 <th>Produkt</th>
-                <th>🥇 Platz 1</th>
-                <th>🥈 Platz 2</th>
-                <th>🥉 Platz 3</th>
-            </tr>
             """
-
+        for i in range(RANK_COLUMNS):
+            html += f"<th>{MEDALS[i]} Platz {i+1}</th>\n"
+        html += "</tr>\n"
 
         for article, entries in sorted(grouped.items()):
             entries = sorted(entries, key=lambda x: x["price"] if x["price"] else float('inf'))
-            top3 = entries[:3]
+            max_columns = min(RANK_COLUMNS, len(entries))  # Maximal 6 Spalten, aber nicht mehr als verfügbare Einträge
+            top_entries = entries[:max_columns]
 
-            second_price = top3[1]["price"] if len(top3) > 1 else None
+            second_price = top_entries[1]["price"] if len(top_entries) > 1 else None
 
             cells = []
-            for i in range(3):
-                if i < len(top3):
-                    cells.append(format_cell(i, top3[i], second_price))
-                else:
-                    cells.append("")
+            for i in range(RANK_COLUMNS):
+                cells.append(format_cell(i, top_entries[i], second_price)) if i < max_columns else cells.append("")
+
+            # Dynamische Tabellenzellen generieren
+            cells_html = "".join([f"<td>{cell}</td>" for cell in cells])
 
             html += f"""
-                <tr>
-                    <td><strong>{article}</strong></td>
-                    <td>{cells[0]}</td>
-                    <td>{cells[1]}</td>
-                    <td>{cells[2]}</td>
-                </tr>
-            """
+                        <tr>
+                            <td><strong>{article}</strong></td>
+                            {cells_html}
+                        </tr>
+                    """
         html += """
             </table>
         """
