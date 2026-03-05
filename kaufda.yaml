@@ -124,6 +124,13 @@ articles:
           - Barilla.*Pasta
           - Pasta.*Barilla
     - Olivenöl
+    - "Senf Händlmaier/Develey/Kühne":
+        multisearch:
+          - Händlmaier
+          - Develey
+          - Kühne
+        match_any:
+          - Senf
 
   "Obst & Gemüse🍎🫑":
     - Spargel
