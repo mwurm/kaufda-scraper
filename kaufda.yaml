@@ -28,7 +28,10 @@ articles:
         match_none:
           - vegan
           - Garden Gourmet
-    - Rinderhüftsteak
+    - Rinderhüftsteak:
+        multisearch:
+          - Rinderhüftsteak
+          - Rindersteakhüfte
     - Rumpsteak
     - Cevapcici:
         match_none:
