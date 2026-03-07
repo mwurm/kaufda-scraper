@@ -35,8 +35,8 @@ requests_cache_session = CachedSession(os.getenv('REQUESTS_CACHE_DB_PATH'), expi
 
 END_OF_WEEK = datetime.now().date() + timedelta(days=(6 - datetime.now().date().weekday()) % 7)
 
-PRINT_CATEGORY_PATHS = True
-PRINT_DEALS = True
+PRINT_CATEGORY_PATHS = False
+PRINT_DEALS = False
 
 TAGE = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 MEDALS = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣"]
@@ -321,13 +321,9 @@ def search_article(search_req: SearchRequest, preffered_publishers: List[str] | 
     publisher_filtered_contents = list(filter(lambda e: e.get("content", {}).get("publisherName", "").lower() in preffered_publishers, contents)) if preffered_publishers else contents
     found_results = list()
     for result_entry in publisher_filtered_contents:
-        try:
-            search_result = extract_content(result_entry, search_req)
-            if search_result:
-                found_results.append(search_result)
-        except Exception as e:
-            print(f"Exception: {e}")
-            continue
+        search_result = extract_content(result_entry, search_req)
+        if search_result:
+            found_results.append(search_result)
 
     if not preffered_publishers or 'aldi süd' in [p.lower() for p in preffered_publishers]:
         aldi_results = search_aldi(search_req)
@@ -386,132 +382,128 @@ def search_aldi(search_req: SearchRequest) -> List[SearchResult]:
 
 
 def extract_content(result_entry: dict, search_req: SearchRequest) -> SearchResult | None:
-    content_object = result_entry.get("content", {})
+    try:
+        content_object = result_entry.get("content", {})
 
-    publisher_name = content_object.get("publisher", {}).get("name", None)
-    if not publisher_name:
-        publisher_name = content_object.get("publisherName")
-    #publisher_name = 'Netto' if publisher_name and publisher_name.lower() == 'netto marken-discount' else publisher_name
-    image = content_object.get("image", {})
-    image_url = None
-    if image and isinstance(image, dict):
-        image_url = image.get("url", None)
-    elif image and isinstance(image, str):
-        image_url = image
+        publisher_name = content_object.get("publisher", {}).get("name", None)
+        if not publisher_name:
+            publisher_name = content_object.get("publisherName")
+        #publisher_name = 'Netto' if publisher_name and publisher_name.lower() == 'netto marken-discount' else publisher_name
+        image = content_object.get("image", {})
+        image_url = None
+        if image and isinstance(image, dict):
+            image_url = image.get("url", None)
+        elif image and isinstance(image, str):
+            image_url = image
 
-    pub_dates = []
-    for publicationProfile in content_object.get("publicationProfiles", []):
-        start = publicationProfile.get("validity", {}).get("startDate")
-        end = publicationProfile.get("validity", {}).get("endDate")
+        pub_dates = []
+        for publicationProfile in content_object.get("publicationProfiles", []):
+            start = publicationProfile.get("validity", {}).get("startDate")
+            end = publicationProfile.get("validity", {}).get("endDate")
 
-        start_parsed = parser.parse(start) if start else None
-        end_parsed = parser.parse(end) if end else None
+            start_parsed = parser.parse(start) if start else None
+            end_parsed = parser.parse(end) if end else None
 
-        cutoff = time(21, 0)
+            cutoff = time(21, 0)
 
-        if start_parsed.time() >= cutoff:
-            start_parsed = start_parsed + timedelta(days=1)
+            if start_parsed.time() >= cutoff:
+                start_parsed = start_parsed + timedelta(days=1)
 
-        start_date = start_parsed.date()
-        # Start = Sonntag? → Montag
-        if start_date.weekday() == 6:
-            start_date = start_date + timedelta(days=1)
+            start_date = start_parsed.date()
+            # Start = Sonntag? → Montag
+            if start_date.weekday() == 6:
+                start_date = start_date + timedelta(days=1)
 
-        end_date = end_parsed.date()
-        pub_dates.append((start_date, end_date))
+            end_date = end_parsed.date()
+            pub_dates.append((start_date, end_date))
 
-    # finde gesuchten artikel in categoryPaths
-    products = content_object.get("products", [])
-    found = False
+        # finde gesuchten artikel in categoryPaths
+        products = content_object.get("products", [])
+        found = False
 
-    for p in products:
-        name_and_description = p.get("name") + "; " + ", ".join([desc.get("paragraph") for desc in p.get('description', [])])
+        for p in products:
+            name_and_description = p.get("name") + "; " + ", ".join([desc.get("paragraph") for desc in p.get('description', [])])
 
-        if PRINT_CATEGORY_PATHS:
-            print(f"name;description: {name_and_description}")
-            print(f"{image_url}")
-
-        product_name_with_all_context_paths = name_and_description
-        category_path_strings = []
-        for category_path in p.get('categoryPaths', []):
-            if isinstance(category_path, dict):
-                category_path = [category_path]
-            path = "/".join([cat.get("name", "").lower() for cat in category_path])
-            category_path_strings.append(path)
             if PRINT_CATEGORY_PATHS:
-                print(f"   category path: {path}")
+                print(f"name;description: {name_and_description}")
+                print(f"{image_url}")
 
-        product_name_with_all_context_paths += ";" + ";".join(category_path_strings)
+            product_name_with_all_context_paths = name_and_description
+            category_path_strings = []
+            for category_path in p.get('categoryPaths', []):
+                if isinstance(category_path, dict):
+                    category_path = [category_path]
+                path = "/".join([cat.get("name", "").lower() for cat in category_path])
+                category_path_strings.append(path)
+                if PRINT_CATEGORY_PATHS:
+                    print(f"   category path: {path}")
+
+            product_name_with_all_context_paths += ";" + ";".join(category_path_strings)
 
 
-        for match_pattern in search_req.match_any:
-            if re.search(match_pattern, product_name_with_all_context_paths, re.IGNORECASE):
-                found = True
-                break
-
-        if search_req.match_none:
-            for nomatch_pattern in search_req.match_none:
-                if re.search(nomatch_pattern, product_name_with_all_context_paths, re.IGNORECASE):
-                    found = False
+            for match_pattern in search_req.match_any:
+                if re.search(match_pattern, product_name_with_all_context_paths, re.IGNORECASE):
+                    found = True
                     break
 
-        if found:
-            deals = content_object.get("deals", [])
+            if search_req.match_none:
+                for nomatch_pattern in search_req.match_none:
+                    if re.search(nomatch_pattern, product_name_with_all_context_paths, re.IGNORECASE):
+                        found = False
+                        break
 
-            if PRINT_DEALS:
-                for d in deals:
-                    print(f"   {d}")
+            if found:
+                deals = content_object.get("deals", [])
 
-            deals_dataobjects: list[Deal] = []
-            for deal in deals:
-                deal_type = deal.get("type")
-                deal_description = deal.get("description", None)
-                price_min = min(deal.get("min"), deal.get("max"))
-                price_max = max(deal.get("min"), deal.get("max"))
-                price_by_base_unit = deal.get("priceByBaseUnit")
-                conditions = deal.get('conditions', [])
-                condition_strings = []
-                for condition in conditions:
-                    for key, value in condition.items():
-                        if isinstance(value, str):
-                            condition_strings.append(value)
-                        else:
-                            condition_strings.append(f"{key}: {value}")
+                if PRINT_DEALS:
+                    for d in deals:
+                        print(f"   {d}")
 
-                if 'EUR' != deal.get("currencyCode", "EUR"):
-                    raise ValueError(f"Unexpected currency: {deal.get('currencyCode')}")
+                deals_dataobjects: list[Deal] = []
+                for deal in deals:
+                    deal_type = deal.get("type")
+                    deal_description = deal.get("description", None)
+                    price_min = min(deal.get("min"), deal.get("max"))
+                    price_max = max(deal.get("min"), deal.get("max"))
+                    price_by_base_unit = deal.get("priceByBaseUnit")
+                    conditions = deal.get('conditions', [])
+                    condition_strings = []
+                    for condition in conditions:
+                        for key, value in condition.items():
+                            if isinstance(value, str):
+                                condition_strings.append(value)
+                            else:
+                                condition_strings.append(f"{key}: {value}")
 
-                deals_dataobjects.append(Deal(type=deal_type, description=deal_description, price_min=price_min, price_max=price_max, price_by_base_unit=price_by_base_unit, conditions=condition_strings))
+                    if 'EUR' != deal.get("currencyCode", "EUR"):
+                        raise ValueError(f"Unexpected currency: {deal.get('currencyCode')}")
 
-            # Versuche zuerst SALES_PRICE zu extrahieren, sonst REGULAR_PRICE
-            search_result = SearchResult(publisher_name=publisher_name, article=search_req.name,
-                                         image_url=image_url,
-                                         deals=tuple(deals_dataobjects), description=name_and_description, pub_dates=pub_dates)
+                    deals_dataobjects.append(Deal(type=deal_type, description=deal_description, price_min=price_min, price_max=price_max, price_by_base_unit=price_by_base_unit, conditions=condition_strings))
 
-            return search_result
+                # Versuche zuerst SALES_PRICE zu extrahieren, sonst REGULAR_PRICE
+                search_result = SearchResult(publisher_name=publisher_name, article=search_req.name,
+                                             image_url=image_url,
+                                             deals=tuple(deals_dataobjects), description=name_and_description, pub_dates=pub_dates)
 
+                return search_result
+
+            return None
+    except Exception as e:
+        print(f"Could not extract offer content: {e}")
         return None
-
-
 
 
 def run_search_req(search_request: SearchRequest, publishers: List[str] | None = None):
 
-    try:
-        results = search_article(search_request, publishers)
+    results = search_article(search_request, publishers)
 
-        if results:
-            print(f"## {search_request.name}")
-            for result in sorted(results, key=lambda r: r.min_price()):
-                print(result.to_markdown())
-            return results
-        else:
-            return []
-
-
-
-    except Exception as e:
-        print(f"   Fehler: {e}\n")
+    if results:
+        print(f"## {search_request.name}")
+        for result in sorted(results, key=lambda r: r.min_price()):
+            print(result.to_markdown())
+        return results
+    else:
+        return []
 
 
 def extract_base_unit(text: str) -> tuple[float, str]:
@@ -526,6 +518,7 @@ def extract_base_unit(text: str) -> tuple[float, str]:
 
         # 2er-Matches
         r"(\d+)\s*(kg|ml|g|l)",  # "100g
+        r"(\d+.\d{3})-(kg|ml|g|l)-P",  # "1.000-g-Pckg  (mit Tausenderpunkt)
         r"(\d+)-(kg|ml|g|l)-P",  # "100-g-Pckg
 
         # 1er-Matches
@@ -543,7 +536,7 @@ def extract_base_unit(text: str) -> tuple[float, str]:
                 base_unit = (1.0, match.group(1))
                 break
             if len(match.groups()) == 2:
-                value = float(match.group(1))
+                value = float(match.group(1).replace(".", ""))
                 base_unit = match.group(2)
                 if base_unit == "g":
                     base_unit = "kg"
@@ -623,6 +616,8 @@ def extract_normalized_price(result: SearchResult) -> tuple[Deal, float, str]:
 
     best_deal_guess = sorted(result.deals, key=lambda d: 0 if d.type in priority_types else 1)[0] if result.deals else None
 
+    if base_unit[0] == 0:
+        print("xxx")
     if base_unit[1]:
         price_of_base_unit = extract_price_of_base_unit(result.description)
         if price_of_base_unit is not None:
@@ -858,11 +853,11 @@ def generate_html_table(outfile: str, results_by_category: dict) -> str:
 
     return html
 
-if __name__ == "__main__":
-    config = load_config("kaufda.yaml")
+
+def find_offers(config: dict = load_config("kaufda.yaml")) -> dict:
+    results_by_cat = {}
     publishers = config.get("publishers")
 
-    results_by_category = {}
     for category, items in config.get("articles", {}).items():
         print("")
         print(f"# {category}")
@@ -874,17 +869,23 @@ if __name__ == "__main__":
                     search_requests = SearchRequest.from_config(config=item)
                     for req in search_requests:
                         results = run_search_req(req, publishers)
-                        all_results.extend(results)
+                        if results:
+                            all_results.extend(results)
 
                 elif isinstance(item, str):
-                    results = run_search_req(SearchRequest(name=item, match_any=[item], match_none=None, multisearch=[item]), publishers)
+                    results = run_search_req(
+                        SearchRequest(name=item, match_any=[item], match_none=None, multisearch=[item]), publishers)
                     all_results.extend(results)
                 else:
                     print(f"Unsupported item type: {item.__class__} in category '{category}'")
-            results_by_category[category] = all_results
+            results_by_cat[category] = all_results
+    return results_by_cat
 
 
+if __name__ == "__main__":
+    results_by_category = find_offers()
     generate_html_table(outfile=f"docs/index.html", results_by_category=results_by_category)
+#    generate_html_table(outfile=f"docs/index-nextweek.html", results_by_category=results_by_category)
 
     exit(0)
 
