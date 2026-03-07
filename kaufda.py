@@ -33,7 +33,6 @@ requests_cache_session = CachedSession(os.getenv('REQUESTS_CACHE_DB_PATH'), expi
 
 # self.requests_cache_session.cache.save_response = save_response_if_criteria_met
 
-END_OF_WEEK = datetime.now().date() + timedelta(days=(6 - datetime.now().date().weekday()) % 7)
 
 PRINT_CATEGORY_PATHS = False
 PRINT_DEALS = False
@@ -247,8 +246,8 @@ class SearchResult:
             date_strs.append(f"{TAGE[start.weekday()]} {start.strftime('%d.%m') if start else '?'} - {TAGE[end.weekday()]} {end.strftime('%d.%m') if end else '?'}")
         return date_strs
 
-    def has_no_deal_in_current_week(self) -> bool:
-        today = datetime.now().date()
+    def has_no_deal_in_current_week(self, reference_day) -> bool:
+        today = reference_day
         if today.weekday() == 6:
             today = today + timedelta(days=1)
 
@@ -257,8 +256,8 @@ class SearchResult:
                 return False
         return True
 
-    def has_deal_outside_of_full_week(self) -> bool:
-        today = datetime.now().date()
+    def has_deal_outside_of_full_week(self, reference_day) -> bool:
+        today = reference_day
         if today.weekday() == 6:
             today = today + timedelta(days=1)
 
@@ -641,11 +640,11 @@ def detect_badges(result: SearchResult) -> str:
     return " ".join(badges)
 
 
-def group_by_article(results: Iterable[SearchResult]):
+def group_by_article(results: Iterable[SearchResult], reference_day):
     grouped = defaultdict(list)
 
     for r in results:
-        if r.has_no_deal_in_current_week():
+        if r.has_no_deal_in_current_week(reference_day):
             continue
         normalized_price = extract_normalized_price(r)
 
@@ -661,7 +660,7 @@ def group_by_article(results: Iterable[SearchResult]):
     return grouped
 
 
-def format_cell(rank: int, entry: dict, second_price: float | None):
+def format_cell(rank: int, entry: dict, second_price: float | None, reference_day) -> str:
     medal = MEDALS[rank]
 
     price = entry["price"]
@@ -686,7 +685,7 @@ def format_cell(rank: int, entry: dict, second_price: float | None):
     img_html = f'<img src="{image}" style="width:160px;border-radius:8px;"><br>'
 
 
-    pub_dates_html_lines = "📆" + "<br>".join(result.pub_date_strings()) if result.has_deal_outside_of_full_week() else None
+    pub_dates_html_lines = "📆" + "<br>".join(result.pub_date_strings()) if result.has_deal_outside_of_full_week(reference_day) else None
 
     return f"""
         <div style="text-align:center;">
@@ -699,7 +698,9 @@ def format_cell(rank: int, entry: dict, second_price: float | None):
     """
 
 
-def generate_html_table(outfile: str, results_by_category: dict) -> str:
+def generate_html_table(outfile: str, results_by_category: dict, reference_day = datetime.now().date()) -> str:
+    start_of_week = reference_day + timedelta(days=(0 - reference_day.weekday()))
+    end_of_week = reference_day + timedelta(days=(6 - reference_day.weekday()) % 7)
 
     html = f"""
     <html>
@@ -787,7 +788,7 @@ def generate_html_table(outfile: str, results_by_category: dict) -> str:
     </head>
     <body style="font-family:Arial;">
         <h2>🛒 Einkaufsübersicht</h2>
-        Für aktuelle Woche bis {TAGE[END_OF_WEEK.weekday()]} {END_OF_WEEK.strftime('%d.%m')}
+        Für Woche {TAGE[start_of_week.weekday()]} {start_of_week.strftime('%d.%m')} bis {TAGE[end_of_week.weekday()]} {end_of_week.strftime('%d.%m')}
         <br><br>
         <input 
             type="text" 
@@ -805,8 +806,13 @@ def generate_html_table(outfile: str, results_by_category: dict) -> str:
 
     RANK_COLUMNS = 6
 
+    html += f"""
+    <br><br>
+    <a href="index.html">➡️ aktuelle Woche</a> <a href="index-nextweek.html">➡️ nächste Woche</a>
+    """
+
     for (category, results) in results_by_category.items():
-        grouped = group_by_article(results)
+        grouped = group_by_article(results, reference_day)
 
         if len(grouped) == 0:
             continue
@@ -829,7 +835,7 @@ def generate_html_table(outfile: str, results_by_category: dict) -> str:
 
             cells = []
             for i in range(RANK_COLUMNS):
-                cells.append(format_cell(i, top_entries[i], second_price)) if i < max_columns else cells.append("")
+                cells.append(format_cell(i, top_entries[i], second_price, reference_day)) if i < max_columns else cells.append("")
 
             # Dynamische Tabellenzellen generieren
             cells_html = "".join([f"<td>{cell}</td>" for cell in cells])
@@ -884,10 +890,9 @@ def find_offers(config: dict = load_config("kaufda.yaml")) -> dict:
 
 if __name__ == "__main__":
     results_by_category = find_offers()
-    generate_html_table(outfile=f"docs/index.html", results_by_category=results_by_category)
-#    generate_html_table(outfile=f"docs/index-nextweek.html", results_by_category=results_by_category)
-
-    exit(0)
+    ref = datetime.now().date()
+    generate_html_table(outfile=f"docs/index.html", results_by_category=results_by_category, reference_day=ref)
+    generate_html_table(outfile=f"docs/index-nextweek.html", results_by_category=results_by_category, reference_day=ref + timedelta(days=7))
 
 
 
