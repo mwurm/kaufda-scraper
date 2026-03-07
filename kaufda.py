@@ -1,26 +1,21 @@
-import base64
-from io import BytesIO
-
-import os
 import random
-from datetime import datetime, time, timedelta, timezone
-from collections import defaultdict
-from typing import Iterable
-import requests
-import time as time_module
-from typing import List, Dict
-import yaml
-from pathlib import Path
-from hashlib import sha256
 import re
-from decimal import Decimal, InvalidOperation
+import time as time_module
+from collections import defaultdict
 from dataclasses import dataclass
+from datetime import datetime, time, timedelta
+from decimal import Decimal, InvalidOperation
+from hashlib import sha256
+from typing import Iterable
+from typing import List, Dict
+
+import yaml
 from dateutil import parser
-from requests_cache import OriginalResponse, CachedResponse, CachedSession
 from dotenv import load_dotenv, find_dotenv
+from requests_cache import CachedSession
 
 load_dotenv(find_dotenv())
-requests_cache_session = CachedSession(os.getenv('REQUESTS_CACHE_DB_PATH'), expire_after=timedelta(hours=6))
+requests_cache_session = CachedSession("requests_cache.sqlite", expire_after=timedelta(hours=6))
 
 # original_save_response = self.requests_cache_session.cache.save_response
 # def save_response_if_criteria_met(key, response, *args, **kwargs):
