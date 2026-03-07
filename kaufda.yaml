@@ -8,6 +8,28 @@ publishers:
 # "rewe", "edeka", "lidl", "Netto Marken-Discount", "Penny", "Metro"]]
 articles:
   Fleisch🥩:
+    - Hackfleisch gemischt:
+        match_any:
+          - hackfleisch.*gemischt
+          - gemischt.*hackfleisch
+        match_none:
+          - vegan
+          - frikadelle
+          - burger
+          - fleichbällchen
+          - cevapcici
+    - Hackfleisch Rind:
+        match_any:
+          - hackfleisch.*Rind
+          - Rind.*hackfleisch
+        match_none:
+          - gemischt
+          - Schwein
+          - vegan
+          - frikadelle
+          - burger
+          - fleichbällchen
+          - cevapcici
     - Ente
     - Lamm
     - Hirsch
@@ -148,6 +170,7 @@ articles:
     - Heidelbeeren
     - Erdbeeren
     - Himbeeren
+    - Avocado
   Backwaren🥖🥨:
     - Golden Toast
 
