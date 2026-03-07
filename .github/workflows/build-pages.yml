@@ -1,0 +1,41 @@
+name: Build GitHub Pages
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"   # täglich um 03:00 UTC
+  workflow_dispatch:      # optional: manuell starten
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install dependencies
+        run: |
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+
+      - name: Run generator
+        run: python kaufda.py
+
+      - name: Commit updated HTML
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add docs/
+          git diff --cached --quiet || git commit -m "Update generated HTML"
+
+          git push
