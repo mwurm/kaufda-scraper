@@ -777,6 +777,8 @@ def generate_html_table(outfile: str, results_by_category: dict, reference_day =
     <body style="font-family:Arial;">
         <h2>🛒 Einkaufsübersicht</h2>
         Für Woche {TAGE[start_of_week.weekday()]} {start_of_week.strftime('%d.%m')} bis {TAGE[end_of_week.weekday()]} {end_of_week.strftime('%d.%m')}
+        <br>
+        <small>Erstellt am {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}.</small>
         <br><br>
         <input 
             type="text" 
