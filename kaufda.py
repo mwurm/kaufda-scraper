@@ -356,7 +356,7 @@ def search_aldi(search_req: SearchRequest) -> List[SearchResult]:
         return None
 
 
-    brochure_url = f"https://content-viewer-be.kaufda.de/api/v1/brochures/{aldi_brochure_id}/pages?partner=kaufda_web&brochureKey=&lat=47.965625499999994&lng=11.753921799999999"
+    brochure_url = f"https://content-viewer-be.kaufda.de/v1/brochures/{aldi_brochure_id}/pages?partner=kaufda_web&brochureKey=&lat=47.9699919&lng=11.7766608"
     rsp = requests_cache_session.get(brochure_url, headers=REQUEST_HEADERS)
     rsp.raise_for_status()
 
