@@ -881,8 +881,6 @@ def find_offers(config: dict = load_config("kaufda.yaml")) -> dict:
 if __name__ == "__main__":
     results_by_category = find_offers()
     ref = datetime.now().date()
+    ref = ref + timedelta(days=(2 - ref.weekday()))  # change ref to Wednesday of that week
     generate_html_table(outfile=f"docs/index.html", results_by_category=results_by_category, reference_day=ref)
-    generate_html_table(outfile=f"docs/index-nextweek.html", results_by_category=results_by_category, reference_day=ref + timedelta(days=7))
-
-
-
+    generate_html_table(outfile=f"docs/index-nextweek.html", results_by_category=results_by_category, reference_day=(ref + timedelta(days=7)))
